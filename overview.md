@@ -112,3 +112,8 @@ Context management at scale, task decomposition strategy, batch processing — t
 | --- | ---------------------------------------------------- | -------------- |
 | 16  | Context Management in Production Systems             | Ch 11, 12      |
 | 17  | Task Decomposition: Designing the Shape of Workflows | Ch 8           |
+| 18  | Scale and Optimization: Batch Processing and Built-in Tools | Ch 7, 13  |
+| 19  | Full Practice Exam (60 Questions)                    | Practice Test  |
+| 20  | Final Review and Exam Readiness                      | Exam Q 12, all domains |
+
+**Capstone:** AI-powered research platform — multi-agent architecture, task decomposition strategy, provenance design, batch processing, error handling, and reliability analysis.
