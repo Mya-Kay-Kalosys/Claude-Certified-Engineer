@@ -310,7 +310,59 @@ When validation fails, re-prompt Claude with the original document, the incorrec
 ---
 
 **Self-correction schemas**
-A schema can be designed to extract both a stated value and a computed value, allowing your code to detect inconsistencies automatically without needing a separate validation pass.
+A schema can be designed to extract both a stated value and a computed value, allowing your code to detect inconsistencies automatically without needing a separate validation pass. The key insight is that Claude does not do the arithmetic — the schema asks it to extract what the document *states* as the total and the individual line item prices separately. Your code then sums the line items and compares.
+
+A `conflict_detected` boolean field is included as Claude's own soft assessment of whether the values appear consistent. Your application code should always independently verify with its own arithmetic check. The reason to have both is that they tell you different things: if both Claude and your code agree there is a discrepancy, a retry is worth attempting — Claude saw something inconsistent in the source document. If your code catches a discrepancy that Claude missed (`conflict_detected: false`), Claude likely misread a value, which a retry is less likely to fix and warrants human review instead.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "stated_total": {
+      "type": "number",
+      "description": "The grand total as explicitly written in the document."
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name":  { "type": "string" },
+          "price": { "type": "number" }
+        },
+        "required": ["name", "price"]
+      }
+    },
+    "conflict_detected": {
+      "type": "boolean",
+      "description": "Set to true if the stated_total does not appear to match the sum of line item prices. Set to false if they appear consistent."
+    }
+  },
+  "required": ["stated_total", "line_items", "conflict_detected"]
+}
+```
+
+```python
+result = extract_invoice(document)
+
+# Always compute the sum independently — do not rely on Claude's arithmetic
+calculated_total = sum(item["price"] for item in result["line_items"])
+discrepancy = abs(result["stated_total"] - calculated_total)
+
+if discrepancy > 0.01:  # tolerance for floating point
+    if result["conflict_detected"]:
+        # Claude also noticed — likely a genuine document error or extraction issue
+        # Retry with specific feedback
+        retry_with_feedback(
+            document,
+            result,
+            error=f"stated_total is {result['stated_total']} but line items sum to {calculated_total:.2f}. Re-check all values."
+        )
+    else:
+        # Claude missed the discrepancy — more likely a misread value than a document error
+        # A retry is less likely to help; flag for human review instead
+        flag_for_review(result, reason="arithmetic discrepancy not detected by model")
+```
 
 > **Exercise:** Design a JSON schema for an expense report where the document contains a stated `total_amount` and a list of `line_items` with individual prices. How do you structure the schema so that your code can detect if the stated total doesn't match the sum of line items — without Claude needing to do the arithmetic itself?
 
