@@ -364,7 +364,7 @@ if discrepancy > 0.01:  # tolerance for floating point
         flag_for_review(result, reason="arithmetic discrepancy not detected by model")
 ```
 
-> **Exercise:** Design a JSON schema for an expense report where the document contains a stated `total_amount` and a list of `line_items` with individual prices. How do you structure the schema so that your code can detect if the stated total doesn't match the sum of line items — without Claude needing to do the arithmetic itself?
+> **Exercise:** Design a JSON schema to extract a social media profile summary. The document contains a `username`, a stated `total_likes` count, and a list of `tweets` each with a `content` and `likes` field. How do you structure the schema so that your code can detect if the stated total doesn't match the sum of individual tweet likes — without Claude needing to do the arithmetic itself?
 
 ---
 
