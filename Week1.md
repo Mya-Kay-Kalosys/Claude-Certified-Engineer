@@ -32,52 +32,23 @@ Every call to Claude includes `model`, `max_tokens`, `system`, `messages`, `tool
 
 ---
 
-**Message roles: `user`, `assistant`, and tool results**
-The `messages` array tells Claude the full history of the conversation. Claude uses all of it to decide what to say next. Tool results appear as `tool_result` content blocks within a `user`-role message.
+**Message roles: `user` and `assistant`**
+The `messages` array tells Claude the full history of the conversation. Claude uses all of it to decide what to say next. The two roles are `user` (input to Claude) and `assistant` (output from Claude). The API enforces a strict alternating structure between them.
 
-A `tool_result` block has the following structure:
+> **Note:** Tool use introduces a third kind of message content — `tool_result` blocks. These are covered in Day 2.
 
-```json
-{
-  "role": "user",
-  "content": [
-    {
-      "type": "tool_result",
-      "tool_use_id": "<id from the assistant's tool_use block>",
-      "content": "<string result, or an array of content blocks>"
-    }
-  ]
-}
-```
-
-The `tool_use_id` ties the result back to the specific tool call Claude made — this matters when Claude calls multiple tools in one turn. There is no `"role": "tool"` in the API; tool results always ride inside a `user`-role message because the API maintains a strict alternating `user`/`assistant` turn structure, and tool results are external input being fed *into* Claude. (More on tools on Day 2)
-
-> **Quick check:** You call Claude, it responds with a tool call, and you execute the tool. What does the next message you send to Claude look like? Sketch the `messages` array at that point, including both the assistant's tool call and your tool result.
+> **Quick check:** What does the `messages` array look like after two turns of a conversation where the user asks a question and Claude answers in prose? Sketch the array.
 
 ---
 
 **The `stop_reason` field**
-Every Claude response includes a `stop_reason`. This is the signal your code must inspect to control agent behavior. There are five values: `end_turn`, `tool_use`, `max_tokens`, `stop_sequence`, and `pause_turn`.
-
-The first four are the core values you'll encounter with client-executed tools. `pause_turn` is specific to server-executed tools (see below) and signals that the server-side loop hit its iteration limit mid-turn — your application should resend the full conversation to let the model continue where it left off.
-
-The canonical agent loop for client-executed tools looks like this:
-
-```python
-while response.stop_reason == "tool_use":
-    tool_results = execute_tools(response)   # your code runs the tools
-    response = client.messages.create(
-        messages=[*messages, response, tool_results]
-    )
-# stop_reason is now "end_turn", "max_tokens", or "stop_sequence"
-```
+Every Claude response includes a `stop_reason`. This is the signal your code must inspect to control agent behavior. The four core values are `end_turn`, `tool_use`, `max_tokens`, and `stop_sequence`. We'll learn more about how `tool_use` fits into the agent loop on Day 2.
 
 > **Quick check:** Match each scenario to the correct `stop_reason` and describe what your code should do next.
 > 1. Claude finishes answering the user's question in prose.
 > 2. Claude decides to look up a customer record.
 > 3. Claude is mid-sentence when the response cuts off.
 > 4. You passed `"stop_sequences": ["###"]` and Claude wrote `###`.
-> 5. You're using `web_search` and the server-side loop hit its iteration cap before finishing.
 
 ---
 
@@ -120,6 +91,41 @@ Not all tools work the same way. Understanding which category a tool falls into 
 
 **What `tool_use` is — and isn't**
 Claude does not execute code. When it wants to use a tool, it generates a structured call request. Your code receives that request, executes it, and returns the result. Claude never touches your database directly.
+
+When Claude makes a tool call, the response has `stop_reason: "tool_use"`. Your code executes the tool and returns the result as a `tool_result` content block inside a `user`-role message — there is no `"role": "tool"` in the API. Tool results ride inside a `user` message because the API maintains a strict alternating `user`/`assistant` turn structure, and tool results are external input being fed *into* Claude.
+
+A `tool_result` block has the following structure:
+
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "tool_result",
+      "tool_use_id": "<id from the assistant's tool_use block>",
+      "content": "<string result, or an array of content blocks>"
+    }
+  ]
+}
+```
+
+The `tool_use_id` ties the result back to the specific tool call Claude made — this matters when Claude calls multiple tools in one turn.
+
+The canonical agent loop for client-executed tools looks like this:
+
+```python
+# Simplified example — no model, max_tokens, system prompt, or error handling shown.
+while response.stop_reason == "tool_use":
+    tool_results = execute_tools(response)   # your code runs the tools
+    response = client.messages.create(
+        messages=[*messages, response, tool_results]
+    )
+# stop_reason is now "end_turn", "max_tokens", or "stop_sequence"
+```
+
+For server-executed tools (`web_search`, `web_fetch`, etc.), a fifth `stop_reason` applies: `pause_turn`. This signals that the server-side loop hit its iteration limit mid-turn — the application should resend the full conversation to let the model continue where it left off.
+
+> **Quick check:** You call Claude, it responds with a tool call, and you execute the tool. What does the next message you send to Claude look like? Sketch the `messages` array at that point, including both the assistant's tool call and your tool result.
 
 > **Quick check:** True or false, and explain: "If I define a `delete_record` tool but Claude's system prompt says it should never delete anything, the record is safe."
 > *(False. Claude might avoid calling it most of the time, but prompt instructions are probabilistic. For destructive operations, use a hook or precondition at the code level — not just the prompt.)*
