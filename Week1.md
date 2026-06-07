@@ -4,6 +4,8 @@
 
 **Exam domains covered:** Domain 4 (Prompt Engineering and Structured Output, 20%), Domain 5 (Context Management and Reliability, 15%)
 
+**Jump to:** [[#Day 1 — How Claude Actually Works (API Fundamentals)|Day 1]], [[#Day 2 — Prompt Engineering Making Claude Do It Well|Day 2]], [[#Day 3 — Giving Claude Abilities Tools and `tool_use`|Day 3]], [[#Day 4 — Structured Output Getting Reliable Data Back|Day 4]], [[#Day 5 — Week 1 Review|Day 5]]
+
 ---
 
 ## Day 1 — How Claude Actually Works (API Fundamentals)
