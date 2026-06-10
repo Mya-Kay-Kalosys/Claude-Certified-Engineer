@@ -102,7 +102,7 @@ The difference between a good and bad subagent prompt is entirely in how much co
 **Parallel subagent spawning**
 A coordinator can issue multiple Agent tool calls in a single response. Claude decides whether to run them concurrently or sequentially — the developer does not schedule this. When tasks are independent, Claude will typically run them in parallel, which dramatically reduces total latency.
 
-> **Quick check:** You're building a research system that needs to: search the web for recent news, search an internal document database, and check a competitor pricing API. All three are independent. How do you structure the coordinator's response to run them in parallel? What must be true about the tasks for parallel execution to be safe?
+> **Quick check:** You're building a research system that needs to: search the web for recent news, search an internal document database, and check a competitor pricing API. All three are independent. How do you structure your request so that Claude can run them in parallel? What would the response look like if Claude does run them in parallel? What must be true about the tasks for parallel execution to be safe?
 
 ---
 
