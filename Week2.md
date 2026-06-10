@@ -329,4 +329,19 @@ Write out the full subagent prompt the coordinator would send to a `draft_resolu
 - Customer tone: polite but firm
 
 **Part C — Hook Design**
-Write 
+Write pseudocode for two hooks your system needs:
+1. A `PreToolUse` hook enforcing the $500 refund limit
+2. A `PostToolUse` hook that trims the `lookup_order` result from 40 fields to the 5 your agents actually use: `order_id`, `status`, `total`, `items`, `return_eligible`
+
+**Part D — Escalation Scenario**
+Walk through the exact sequence of agent actions and tool calls for this scenario:
+> *Customer: "My order ORD-2251 arrived broken. I want a full refund. And honestly, if you can't sort this out, I want to speak to a manager."*
+
+At what point, if any, does escalation occur? Is it immediate or after an attempt to resolve? Justify your answer against the escalation rules from Chapter 9 (which you'll cover fully in Week 3, but preview here).
+
+**Part E — Failure Mode Analysis**
+After two weeks in production, data shows the system escalates 40% of cases — well above the 20% target. The most common escalation reason is "unable to make progress." What are the three most likely root causes, and what change would you investigate first?
+
+---
+
+*← [Back to Week 1](Week1.md) | [Continue to Week 3 →](Week3.md)*
