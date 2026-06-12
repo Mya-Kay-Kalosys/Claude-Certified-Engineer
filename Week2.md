@@ -222,6 +222,50 @@ When an MCP tool fails, it sets `isError: true` in its response. A generic error
 **MCP Resources as "maps"**
 Resources let the agent read context without taking action. A content catalog or database schema provided as a Resource means the agent doesn't need exploratory tool calls to understand what data exists — it already has a map.
 
+**Example: Jira structure and MCP tools**
+
+A typical Jira instance has:
+- **Projects** (e.g., "PLATFORM", "DATA", "INFRA") — each with a key and name
+- **Epics** within each project (e.g., "Performance improvements", "API v2 redesign") — group related work
+- **Sprints** (e.g., "Sprint 14 — June 2026") — time-bound delivery cycles
+- **Issues** (tasks, bugs, stories) — assigned to epics and sprints with status and assignee
+
+The Jira MCP server might expose tools like:
+- `list_projects()` → returns all projects
+- `list_epics(project_key)` → requires knowing the project first
+- `list_sprints(project_key)` → requires knowing the project first
+- `create_issue(project_key, epic_key, sprint_key, ...)` → requires all three keys to categorize properly
+
+It also exposes a resource called `project_structure` that returns a **combined map** like...
+```json
+{
+  "projects": [
+    {
+      "key": "PLATFORM",
+      "name": "Platform Services",
+      "epics": [
+        { "key": "PLAT-100", "name": "Performance improvements" },
+        { "key": "PLAT-101", "name": "API v2 redesign" }
+      ],
+      "sprints": [
+        { "id": "14", "name": "Sprint 14", "startDate": "2026-06-08", "endDate": "2026-06-22" },
+        { "id": "15", "name": "Sprint 15", "startDate": "2026-06-23", "endDate": "2026-07-06" }
+      ]
+    },
+    {
+      "key": "DATA",
+      "name": "Data Platform",
+      "epics": [...],
+      "sprints": [...]
+    }
+  ]
+}
+```
+
+This entire structure is fetched once and provided as a Resource, so the agent has it immediately.
+
+**Important note on Resource lifecycle:** Resources are **computed dynamically from live source data** when the agent connects to the MCP server, not hardcoded at server creation time. However, they are **computed once per connection**, not repeatedly during the task. So the agent gets a consistent snapshot of Jira's current state without needing exploratory tool calls — trading real-time precision for efficiency. If Jira changes mid-task, the agent won't see those changes unless it explicitly re-fetches the Resource.
+
 > **Quick check:** Without an MCP Resource for the Jira project structure, what sequence of tool calls would an agent need to make to understand which epics and sprints exist before it could create a properly categorized ticket? How does a Resource eliminate this overhead?
 
 ---
