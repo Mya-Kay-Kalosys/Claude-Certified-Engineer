@@ -85,6 +85,13 @@ Planning mode lets Claude explore and plan without making changes. It uses Read,
 
 ---
 
+**Naming sessions: `-n` flag and `/rename` command**
+Create a named session at startup with `claude -n auth-refactor`, or rename a session mid-session with `/rename auth-refactor`. Named sessions are findable in the session picker and resumable by name later.
+
+> **Quick check:** You start a long debugging session without naming it. Two hours later, you exit Claude Code. The next day, you want to resume. What are your two options for finding and resuming the session?
+
+---
+
 **`--resume` and `fork_session`: session management**
 `--resume <session-name>` continues a named session with its prior context. `fork_session` creates an independent branch from shared context, useful for exploring two approaches in parallel without them interfering.
 
