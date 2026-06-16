@@ -100,6 +100,14 @@ If you exit without naming a session, you have two ways to get back:
 **`--resume` and `fork_session`: session management**
 `--resume <session-name>` continues a named session with its prior context. `fork_session` creates an independent branch from shared context, useful for exploring two approaches in parallel without them interfering.
 
+**Merging findings from parallel forks**
+Each fork diverges independently after the branch point — their conversations do not merge automatically. To synthesize findings:
+1. In each fork, document conclusions in a scratchpad file (or `/export` the session transcript)
+2. Create a new session and paste both sets of findings side-by-side
+3. Ask Claude to compare trade-offs, highlight risks and benefits for each approach, and recommend which is better for your constraints
+
+This keeps the exploratory sessions clean (no cross-contamination) while ensuring both approaches are evaluated fairly on the same criteria.
+
 > **Exercise:** You're investigating whether to refactor a payments module using Redux or the Context API. Describe how you would use `fork_session` to explore both approaches. What would each fork's starting context look like, and at what point would you merge your findings?
 
 ---
