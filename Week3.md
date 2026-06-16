@@ -106,15 +106,13 @@ If files have changed significantly since a session was saved, or if the context
 > 1. Reviews a pull request diff for security issues
 > 2. Outputs structured JSON
 > 3. Validates against a schema where findings have `file`, `line`, `severity`, and `description` fields
->
-> Then explain why you would use a *separate* Claude instance for this review rather than the instance that generated the code.
 
 ---
 
 **Session isolation for review quality**
 The same Claude session that generated code retains its reasoning context and is less likely to challenge its own decisions. An independent instance — one that only sees the code, not how it was written — produces more objective reviews.
 
-> **Quick check:** A team argues that using the same session for code generation and review is efficient because "Claude already understands the context." What is the specific failure mode this creates, and what does the data in the guide say about its prevalence?
+> **Quick check:** A team argues that using the same session for code generation and review is efficient because "Claude already understands the context." What is the specific failure mode this creates?
 
 ---
 
