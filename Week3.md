@@ -210,7 +210,7 @@ The exercise above shows what data flows when escalating. But "escalate_to_human
 ---
 
 **Multiple matches and identity ambiguity**
-When a search returns multiple customer records for the same name or email, the correct action is to ask for additional identifying information — not to guess, not to proceed with the most likely match.
+When Claude uses a search tool, such as searching a database for a customer by name, then it may get multiple matches. In this case, you usually need to get further identifying information from the user instead of just guessing. This is usually implemented as a PostToolUse hook.
 
 > **Quick check:** `get_customer(email="j.smith@email.com")` returns two records: one in New York and one in Chicago. What does the agent say to the customer, and what additional information does it request? Why is heuristic selection (e.g., "pick the one with more recent activity") the wrong approach?
 
