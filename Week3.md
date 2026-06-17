@@ -203,6 +203,10 @@ When escalating, the agent must pass a complete, self-contained summary to the h
 >
 > Make the summary complete enough that a human operator with no prior context could handle the call confidently.
 
+**Implementation note: escalate_to_human as an interface, not a mechanism**
+
+The exercise above shows what data flows when escalating. But "escalate_to_human" is an abstraction — the actual backend implementation is architecture-dependent. It could be an MCP tool that sends an email to a support team, an API call that creates a help desk ticket, a webhook that pages an on-call person, or a database write to a queue that humans poll. The exam focuses on the interface (what to pass, when to escalate) not the backend. When designing an escalation system, specify what information gets handed off (the structured summary) and the trigger conditions, but the actual implementation depends on your deployment model.
+
 ---
 
 **Multiple matches and identity ambiguity**
