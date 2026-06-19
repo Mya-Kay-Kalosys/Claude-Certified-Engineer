@@ -153,7 +153,11 @@ The Message Batches API processes requests asynchronously with no latency SLA â€
 
 Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
 
-> **Exercise:** Write pseudocode for a batch processing pipeline that: (1) submits 100 documents, (2) waits for results, (3) identifies failures by `custom_id`, (4) adjusts strategy for failed documents (e.g., splitting into chunks), and (5) re-submits only failures.
+**See also:** [Batch API Docs](https://platform.claude.com/docs/en/build-with-claude/message-batches)
+
+>**Exercise:** Think of a scenario where you might use the batches API. Using the Claude SDK in your chosen language, write a script that creates the batch message request, polls the batch for completion, creates a new batch to retry failed requests, and retrieves the results of successful requests. This may take some time, so feel free to save it for your weekly capstone or review this material when you actually need batch requests for your work. 
+
+The important things to understand for the exam are when to use batches instead of synchronous messages and the high-level procedure for processing the results, including failure handling.
 
 ---
 
