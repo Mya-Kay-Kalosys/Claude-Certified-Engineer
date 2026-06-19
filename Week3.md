@@ -157,25 +157,6 @@ Each batch request includes a `custom_id` field to correlate responses with orig
 
 ---
 
-**Batch vs. Real-Time: The Message Batches API**
-
-The Message Batches API processes requests asynchronously with no latency SLA — processing can take up to 24 hours — but costs 50% less than synchronous calls. This makes it ideal for automated workflows where urgency varies.
-
-| Task | API | Why |
-|---|---|---|
-| Pre-merge PR check | Synchronous | Developer is waiting; 24 hours is unacceptable |
-| Overnight tech-debt report | Batch | Result needed by morning; 50% savings justify wait |
-| Weekly security audit | Batch | Not urgent; batch savings are significant |
-| Interactive code review | Synchronous | Immediate response required |
-
-**Batching architecture: `custom_id` and failure recovery**
-
-Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
-
-> **Exercise:** Write pseudocode for a batch processing pipeline that: (1) submits 100 documents, (2) waits for results, (3) identifies failures by `custom_id`, (4) adjusts strategy for failed documents (e.g., splitting into chunks), and (5) re-submits only failures.
-
----
-
 **Session isolation for review quality**
 The same Claude session that generated code retains its reasoning context and is less likely to challenge its own decisions. An independent instance — one that only sees the code, not how it was written — produces more objective reviews.
 
