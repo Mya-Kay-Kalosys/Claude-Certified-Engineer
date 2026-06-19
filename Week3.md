@@ -89,20 +89,6 @@ Planning mode lets Claude explore and plan without making changes. It uses Read,
 `/compact` summarizes prior history to free context window space, but risks losing specific numeric values and dates. `/memory` opens CLAUDE.md for editing so you can persist findings across sessions.
 
 > **Quick check:** You've been investigating an authentication bug for 45 minutes. Claude's context is filling up. You know three critical facts: (1) the bug is in `src/auth/session.ts` at line 142, (2) it only affects users with expired OAuth tokens, and (3) a migration from December 2024 introduced the issue. Before running `/compact`, what should you do with these facts, and why?
-> 	Before running `/compact`, you should run `/memory` and write them down in CLAUDE.md because they may be lost in the compaction process. This will make sure the key facts persist after summarization.
-
----
-
-**Naming sessions: `-n` flag and `/rename` command**
-Create a named session at startup with `claude -n auth-refactor`, or rename a session mid-session with `/rename auth-refactor`. Named sessions are findable in the session picker and resumable by name later.
-
-**Resuming unnamed sessions: `--continue` and the session picker**
-If you exit without naming a session, you have two ways to get back:
-- `claude --continue` resumes the most recent session in the current directory — useful if you only have one active task
-- `claude --resume` opens an interactive session picker showing all sessions in the current project, grouped by name (or first prompt if unnamed). You can search, preview, and select from the list.
-
-> **Quick check:** You start a long debugging session without naming it. Two hours later, you exit Claude Code. The next day, you want to resume. What are your two options for finding and resuming the session?
-> 	I can use --continue or --resume.
 
 ---
 
@@ -284,6 +270,7 @@ When a subagent fails, what the coordinator knows determines whether the system 
 ### Key Concepts
 
 **The four error categories**
+
 | Category | Examples | Retryable | Agent action |
 |---|---|---|---|
 | Transient | Timeout, 503, network failure | Yes | Retry with exponential backoff |
