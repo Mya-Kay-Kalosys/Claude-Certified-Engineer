@@ -92,8 +92,28 @@ Planning mode lets Claude explore and plan without making changes. It uses Read,
 
 ---
 
+**Naming sessions: `-n` flag and `/rename` command**
+Create a named session at startup with `claude -n auth-refactor`, or rename a session mid-session with `/rename auth-refactor`. Named sessions are findable in the session picker and resumable by name later.
+
+**Resuming unnamed sessions: `--continue` and the session picker**
+If you exit without naming a session, you have two ways to get back:
+- `claude --continue` resumes the most recent session in the current directory — useful if you only have one active task
+- `claude --resume` opens an interactive session picker showing all sessions in the current project, grouped by name (or first prompt if unnamed). You can search, preview, and select from the list.
+
+> **Quick check:** You start a long debugging session without naming it. Two hours later, you exit Claude Code. The next day, you want to resume. What are your two options for finding and resuming the session?
+
+---
+
 **`--resume` and `fork_session`: session management**
 `--resume <session-name>` continues a named session with its prior context. `fork_session` creates an independent branch from shared context, useful for exploring two approaches in parallel without them interfering.
+
+**Merging findings from parallel forks**
+Each fork diverges independently after the branch point — their conversations do not merge automatically. To synthesize findings:
+1. In each fork, document conclusions in a scratchpad file (or `/export` the session transcript)
+2. Create a new session and paste both sets of findings side-by-side
+3. Ask Claude to compare trade-offs, highlight risks and benefits for each approach, and recommend which is better for your constraints
+
+This keeps the exploratory sessions clean (no cross-contamination) while ensuring both approaches are evaluated fairly on the same criteria.
 
 > **Exercise:** You're investigating whether to refactor a payments module using Redux or the Context API. Describe how you would use `fork_session` to explore both approaches. What would each fork's starting context look like, and at what point would you merge your findings?
 
@@ -115,6 +135,29 @@ If files have changed significantly since a session was saved, or if the context
 > 3. Validates against a schema where findings have `file`, `line`, `severity`, and `description` fields
 >
 > Then explain why you would use a *separate* Claude instance for this review rather than the instance that generated the code.
+
+---
+
+**Batch vs. Real-Time: The Message Batches API**
+
+The Message Batches API processes requests asynchronously with no latency SLA — processing can take up to 24 hours — but costs 50% less than synchronous calls. This makes it ideal for automated workflows where urgency varies.
+
+| Task | API | Why |
+|---|---|---|
+| Pre-merge PR check | Synchronous | Developer is waiting; 24 hours is unacceptable |
+| Overnight tech-debt report | Batch | Result needed by morning; 50% savings justify wait |
+| Weekly security audit | Batch | Not urgent; batch savings are significant |
+| Interactive code review | Synchronous | Immediate response required |
+
+**Batching architecture: `custom_id` and failure recovery**
+
+Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
+
+**See also:** [Batch API Docs](https://platform.claude.com/docs/en/build-with-claude/message-batches)
+
+>**Exercise:** Think of a scenario where you might use the batches API. Using the Claude SDK in your chosen language, write a script that creates the batch message request, polls the batch for completion, creates a new batch to retry failed requests, and retrieves the results of successful requests. This may take some time, so feel free to save it for your weekly capstone or review this material when you actually need batch requests for your work. 
+
+The important things to understand for the exam are when to use batches instead of synchronous messages and the high-level procedure for processing the results, including failure handling.
 
 ---
 
@@ -183,10 +226,14 @@ When escalating, the agent must pass a complete, self-contained summary to the h
 >
 > Make the summary complete enough that a human operator with no prior context could handle the call confidently.
 
+**Implementation note: escalate_to_human as an interface, not a mechanism**
+
+The exercise above shows what data flows when escalating. But "escalate_to_human" is an abstraction — the actual backend implementation is architecture-dependent. It could be an MCP tool that sends an email to a support team, an API call that creates a help desk ticket, a webhook that pages an on-call person, or a database write to a queue that humans poll. The exam focuses on the interface (what to pass, when to escalate) not the backend. When designing an escalation system, specify what information gets handed off (the structured summary) and the trigger conditions, but the actual implementation depends on your deployment model.
+
 ---
 
 **Multiple matches and identity ambiguity**
-When a search returns multiple customer records for the same name or email, the correct action is to ask for additional identifying information — not to guess, not to proceed with the most likely match.
+When Claude uses a search tool, such as searching a database for a customer by name, then it may get multiple matches. In this case, you usually need to get further identifying information from the user instead of just guessing. This is usually implemented as a PostToolUse hook.
 
 > **Quick check:** `get_customer(email="j.smith@email.com")` returns two records: one in New York and one in Chicago. What does the agent say to the customer, and what additional information does it request? Why is heuristic selection (e.g., "pick the one with more recent activity") the wrong approach?
 
@@ -208,6 +255,7 @@ When a subagent fails, what the coordinator knows determines whether the system 
 ### Key Concepts
 
 **The four error categories**
+
 | Category | Examples | Retryable | Agent action |
 |---|---|---|---|
 | Transient | Timeout, 503, network failure | Yes | Retry with exponential backoff |
