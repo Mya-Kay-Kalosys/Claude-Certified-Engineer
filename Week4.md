@@ -42,7 +42,7 @@ Rather than relying on conversation history (which degrades), extract key transa
 
 **Extraction mechanism: continuous deterministic parsing**
 
-Case facts are extracted automatically by your coordinator *as the conversation progresses* — typically every 5 turns or when accumulated context crosses a threshold. Extraction parses *structured tool responses* (JSON), not natural-language assistant text. The coordinator maintains a field mapping:
+Case facts are extracted automatically by your coordinator script *as the conversation progresses* — typically every 5 turns or when accumulated context crosses a threshold. Extraction parses *structured tool responses* (JSON), not natural-language assistant text. The coordinator maintains a field mapping:
 
 ```
 tool_response.field_name → case_facts.field_name
