@@ -40,6 +40,22 @@ Rather than relying on conversation history (which degrades), extract key transa
 
 > **Exercise:** You're building a multi-turn customer support agent. By turn 7 of a conversation, the following facts have been established: customer ID CUST-4492, order ORD-8821 ($320 blender), 8 days since purchase, item arrived damaged, customer declined replacement, customer requested refund. Write the "case facts" block that should be injected into every subsequent prompt, formatted so Claude can extract the information reliably.
 
+**Extraction mechanism: continuous deterministic parsing**
+
+Case facts are extracted automatically by your coordinator *as the conversation progresses* — typically every 5 turns or when accumulated context crosses a threshold. Extraction parses *structured tool responses* (JSON), not natural-language assistant text. The coordinator maintains a field mapping:
+
+```
+tool_response.field_name → case_facts.field_name
+```
+
+For example, when the agent calls `lookup_order(ORD-8821)` and receives JSON with `{order_id, customer_id, product, price, ...}`, the coordinator's extraction logic:
+1. Parses the JSON deterministically
+2. Maps fields to case fact schema (`price → transaction_amount`, etc.)
+3. Deduplicates by key (e.g., if `order_id` already exists, update, don't duplicate)
+4. Timestamps the extraction
+
+This avoids two pitfalls: (1) relying on the agent to call a `save_case_fact()` tool (unreliable), and (2) parsing natural-language responses with regex (error-prone, loses attribution).
+
 ---
 
 **Trimming tool results with `PostToolUse` hooks**
