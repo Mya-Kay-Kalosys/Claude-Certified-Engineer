@@ -35,6 +35,13 @@ Claude reliably processes content at the very beginning and very end of long inp
 
 ---
 
+**Trimming tool results with `PostToolUse` hooks**
+If `lookup_order` returns 40 fields but the agent only needs 5 for its current task, the other 35 fields consume context without contributing to the decision. A `PostToolUse` hook trims the result before Claude sees it.
+
+> **Quick check:** Why should trimming happen in a hook rather than in the prompt? (i.e., why not just tell Claude in the prompt to "ignore irrelevant fields"?) What is the practical difference in context usage?
+
+---
+
 **Persistent "case facts" blocks**
 Rather than relying on conversation history (which degrades), extract key transactional facts into a structured block that is explicitly included in every prompt — regardless of how history is summarized.
 
@@ -69,12 +76,6 @@ This prevents duplication: if case facts were stored in history and re-injected 
 
 ---
 
-**Trimming tool results with `PostToolUse` hooks**
-If `lookup_order` returns 40 fields but the agent only needs 5 for its current task, the other 35 fields consume context without contributing to the decision. A `PostToolUse` hook trims the result before Claude sees it.
-
-> **Quick check:** Why should trimming happen in a hook rather than in the prompt? (i.e., why not just tell Claude in the prompt to "ignore irrelevant fields"?) What is the practical difference in context usage?
-
----
 
 **Scratchpad files for long investigations**
 In long codebase investigations, the agent reads and writes to a scratchpad file through tool calls. After each major discovery, the agent writes a synthesis to the scratchpad — then consults it when context is tight or resuming a session. Unlike case facts (which the coordinator injects into every prompt), the scratchpad is agent-managed: the agent decides when to write and when to read it. This avoids injecting unneeded content into every prompt while ensuring synthesis from 60+ minutes of investigation is never lost to context degradation or session restart.
