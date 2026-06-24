@@ -97,6 +97,14 @@ When synthesizing information from multiple sources, the link between a claim an
 **Handling conflicting data from multiple sources**
 When two sources give different values for the same metric, the correct behavior is to preserve both with attribution — not to pick one arbitrarily, and not to average them. Let the coordinator (or the human) reconcile.
 
+In the context of a research subagent, conflict coalition would be prevented through the following mechanisms: 
+1. **Schema**: The return schema includes a `findings` array (or similar) rather than a single `result` field. This allows the model to include multiple sources with attribution
+2. **Subagent Prompt:** The subagent's prompt should advise it to include both sources when it encounters a conflict and not to average or choose just one of them. 
+3. **Synthesis Agent Prompt:** The synthesis agent would be instructed to synthesize and cite the information it has received, not to combine conflicting statements.
+4. **Orchestrator:** The orchestrator may collect the conflicts reported by the subagent, and check for obvious violations by the synthesis agent (ranges, keywords like "approximately", etc)
+These measures are imperfect, and it is still possible for the agent to combine conflicting claims occasionally. The important thing is to minimize violations, and maintain attribution so that a human reviewer can perform fact checks as needed.
+
+
 > **Exercise:** Two sources disagree on a key metric:
 > - Spotify Annual Report (March 2024): 12% of streams are AI-generated (methodology: automated audio classification)
 > - Music Industry Association Survey (July 2024): 8% of streams are AI-generated (methodology: survey of 500 labels)
