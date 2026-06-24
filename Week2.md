@@ -95,8 +95,12 @@ This is the most commonly misunderstood property. Subagents do not automatically
 
 ---
 
-**The `Task` tool for spawning subagents**
-Subagents are spawned by the coordinator using the `Task` tool. The coordinator's `allowed_tools` must include `"Task"`. The difference between a good and bad subagent prompt is entirely in how much context is explicitly provided.
+**The `Agent` tool for spawning subagents**
+Subagents are spawned by the coordinator using the `Agent` tool. (Older materials may call this the `Task` tool — they refer to the same thing.) The coordinator's `allowed_tools` must include `"Agent"`.
+
+Subagents are *defined* via the `agents` parameter in `ClaudeAgentOptions`, each with a name, description, system prompt, and tool list. They are *invoked at runtime* by Claude using the Agent tool. Both pieces are required: defining a subagent without including `"Agent"` in `allowedTools` means Claude can never call it.
+
+The difference between a good and bad subagent prompt is entirely in how much context is explicitly provided.
 
 > **Quick check:** Compare these two coordinator calls:
 >
@@ -108,9 +112,14 @@ Subagents are spawned by the coordinator using the `Task` tool. The coordinator'
 ---
 
 **Parallel subagent spawning**
-A coordinator can call multiple `Task` tools in a single response. The subagents run concurrently, which dramatically reduces total latency for independent subtasks.
+A coordinator can issue multiple Agent tool calls in a single response. Claude decides whether to run them concurrently or sequentially — the developer does not schedule this. When tasks are independent, Claude will typically run them in parallel, which dramatically reduces total latency.
 
-> **Quick check:** You're building a research system that needs to: search the web for recent news, search an internal document database, and check a competitor pricing API. All three are independent. How do you structure the coordinator's response to run them in parallel? What must be true about the tasks for parallel execution to be safe?
+> **Quick check:** You're building a research system that needs to: search the web for recent news, search an internal document database, and check a competitor pricing API. All three are independent. How do you structure your request so that Claude can run them in parallel? What would the response look like if Claude does run them in parallel? What must be true about the tasks for parallel execution to be safe?
+
+---
+
+**The message stream in a multi-agent query**
+When subagents are active, all messages — from the coordinator and every subagent — arrive in a single stream. Each message has a `parent_tool_use_id` field: `None` means it came from the top-level coordinator; a non-None value ties it to the specific Agent tool call that spawned that subagent. The stream always ends with a `ResultMessage`, whose `result` field contains the coordinator's final synthesized answer. Subagents' individual outputs exist only as intermediate messages in the stream — they are not surfaced separately.
 
 ---
 
@@ -234,13 +243,56 @@ When an MCP tool fails, it sets `isError: true` in its response. A generic error
 **MCP Resources as "maps"**
 Resources let the agent read context without taking action. A content catalog or database schema provided as a Resource means the agent doesn't need exploratory tool calls to understand what data exists — it already has a map.
 
+**Example: Jira structure and MCP tools**
+
+A typical Jira instance has:
+- **Projects** (e.g., "PLATFORM", "DATA", "INFRA") — each with a key and name
+- **Epics** within each project (e.g., "Performance improvements", "API v2 redesign") — group related work
+- **Sprints** (e.g., "Sprint 14 — June 2026") — time-bound delivery cycles
+- **Issues** (tasks, bugs, stories) — assigned to epics and sprints with status and assignee
+
+The Jira MCP server might expose tools like:
+- `list_projects()` → returns all projects
+- `list_epics(project_key)` → requires knowing the project first
+- `list_sprints(project_key)` → requires knowing the project first
+- `create_issue(project_key, epic_key, sprint_key, ...)` → requires all three keys to categorize properly
+
+It also exposes a resource called `project_structure` that returns a **combined map** like...
+```json
+{
+  "projects": [
+    {
+      "key": "PLATFORM",
+      "name": "Platform Services",
+      "epics": [
+        { "key": "PLAT-100", "name": "Performance improvements" },
+        { "key": "PLAT-101", "name": "API v2 redesign" }
+      ],
+      "sprints": [
+        { "id": "14", "name": "Sprint 14", "startDate": "2026-06-08", "endDate": "2026-06-22" },
+        { "id": "15", "name": "Sprint 15", "startDate": "2026-06-23", "endDate": "2026-07-06" }
+      ]
+    },
+    {
+      "key": "DATA",
+      "name": "Data Platform",
+      "epics": [...],
+      "sprints": [...]
+    }
+  ]
+}
+```
+
+This entire structure is fetched once and provided as a Resource, so the agent has it immediately.
+
+**Important note on Resource lifecycle:** Resources are **computed dynamically from live source data** when the agent connects to the MCP server, not hardcoded at server creation time. However, they are **computed once per connection**, not repeatedly during the task. So the agent gets a consistent snapshot of Jira's current state without needing exploratory tool calls — trading real-time precision for efficiency. If Jira changes mid-task, the agent won't see those changes unless it explicitly re-fetches the Resource.
+
 > **Quick check:** Without an MCP Resource for the Jira project structure, what sequence of tool calls would an agent need to make to understand which epics and sprints exist before it could create a properly categorized ticket? How does a Resource eliminate this overhead?
 
 ---
 
 ### Extension Question
-
-Your team has built a custom internal MCP server for a unique HR workflow. A community MCP server for Slack also exists. How do you decide which to build vs. which to adopt, and what are the maintenance implications of each choice?
+Your team is building an HR agent and needs to decide whether to build your own MCP server or use a community one. How do you make this decision, and what are the maintenance implications of each choice?
 
 ---
 
