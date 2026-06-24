@@ -56,6 +56,17 @@ For example, when the agent calls `lookup_order(ORD-8821)` and receives JSON wit
 
 This avoids two pitfalls: (1) relying on the agent to call a `save_case_fact()` tool (unreliable), and (2) parsing natural-language responses with regex (error-prone, loses attribution).
 
+**Storage and injection: external, not in conversation history**
+
+Case facts live in external persistent storage (database, file, or memory store) but are *never* added to the stored conversation history itself. On each turn, the coordinator:
+
+1. Retrieves the current case facts from external storage
+2. Assembles the prompt: [System Prompt] + [Case Facts Block] + [Conversation History] + [Current User Message]
+3. Sends the prompt to Claude
+4. Stores only the user/assistant turns in conversation history (not the injected case facts)
+
+This prevents duplication: if case facts were stored in history and re-injected each turn, they would accumulate and bloat the context window. By keeping them external and injecting fresh, facts are always current and the history stays clean.
+
 ---
 
 **Trimming tool results with `PostToolUse` hooks**
