@@ -21,17 +21,10 @@ Systems that work in demos often degrade in production. This session is about wh
 
 ### Key Concepts
 
-**Progressive summarization risk**
-When `/compact` or automatic summarization compresses conversation history, specific values (exact dollar amounts, percentages, timestamps, line numbers) tend to become vague ("roughly," "about," "a few"). The longer the session, the more lossy the compression.
-
-> **Quick check:** A session has been running for 90 minutes investigating a pricing bug. Claude summarizes the history and then confidently refers to "a discount of around 15%." The actual discount was 12.5% — a number that matters for a compliance report. What should have been done before the summary was run, and how?
-
----
-
-**The lost-in-the-middle effect**
-Claude reliably processes content at the very beginning and very end of long inputs. Content in the middle is statistically more likely to be missed or underweighted. This has direct implications for how you structure prompts that contain large amounts of context.
-
-> **Exercise:** You need to send Claude a 4,000-token aggregated research report along with a request to identify the three most critical findings and write three follow-up action items. The report has 12 sections. Where in the message do you put (a) the critical findings from your own prior review, (b) the bulk of the report, and (c) the follow-up action items? Justify the placement of each.
+**Recall: Context Window Problems**
+- Accumulation of tool calls: each tool call adds context to the conversation history. If it returns many irrelevant fields, then this is a waste of context and tokens!
+- Progressive summarization risk: When context is periodically summarized over long sessions, specific details (especially numerical values), tend to be lost or approximated.
+- Lost-in-the-middle effect: Content in the middle of long inputs tends to be neglected compared to the beginning and end of the input.
 
 ---
 
