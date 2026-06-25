@@ -5,7 +5,7 @@
 **Exam domains covered:** Domain 1 (Agent Architecture and Orchestration, 27%), Domain 4 (Prompt Engineering and Structured Output, 20%), Domain 5 (Context Management and Reliability, 15%)
 
 ### Quick Navigation Links
-**Obsidian:** [Day 16](#Day%2016%20—%20Context%20Management%20in%20Production%20Systems), [Day 17](#Day%2017%20—%20Task%20Decomposition%20Designing%20the%20Shape%20of%20Workflows), [Day 18](#Day%2018%20—%20Scale%20and%20Optimization%20Batch%20Processing%20and%20Built-in%20Tools), [Day 19](#Day%2019%20—%20Full%20Practice%20Exam%20(60%20Questions)), [Day 20](#Day%2020%20—%20Final%20Review%20and%20Exam%20Readiness)
+**Obsidian:** [Day 16](#Day%2016%20—%20Context%20Management%20in%20Production%20Systems), [Day 17](#Day%2017%20—%20Task%20Decomposition%20Designing%20the%20Shape%20of%20Workflows), [Day 18](#Day%2018%20—%20Scale%20and%20Optimization%20Batch%20Processing), [Day 19](#Day%2019%20—%20Full%20Practice%20Exam%20(60%20Questions)), [Day 20](#Day%2020%20—%20Final%20Review%20and%20Exam%20Readiness)
 
 **Markdown:** [Day 16](#day16), [Day 17](#day17), [Day 18](#day18), [Day 19](#day19), [Day 20](#day20)
 
@@ -170,31 +170,36 @@ Use fixed pipelines when the task structure is predictable, steps are known in a
 > 4. Understand the architecture of an unfamiliar open-source codebase before contributing
 
 ---
-
 ### Extension Question
 A colleague argues that dynamic decomposition is always better than fixed pipelines because it's "more intelligent" and "adapts to the situation." When would you push back on this, and what are the practical costs of dynamic decomposition that fixed pipelines avoid?
 
 ---
-
 <a id="day18"></a>
-## Day 18 — Scale and Optimization: Batch Processing and Built-in Tools
-**Guide reference:** Chapters 7 and 13
+## Day 18 — Scale and Optimization: Batch Processing
+**Guide reference:** Chapter 7
 
-Two efficiency topics that round out the architect's toolkit: the Batches API for cost-effective bulk processing, and the built-in tool reference for systematic codebase investigation.
+The Batches API for cost-effective bulk processing at scale.
 
 ---
+### Key Concepts
 
-### Key Concepts (Chapter 7 — Message Batches API)
+**Batch vs. Real-Time: The Message Batches API**
 
-**When to use batch vs. synchronous**
-The Batches API offers 50% cost savings but may take up to 24 hours with no latency SLA. It is suitable for non-blocking tasks; it is unsuitable for anything a developer, customer, or downstream process is actively waiting on.
+The Message Batches API processes requests asynchronously with no latency SLA — processing can take up to 24 hours — but costs 50% less than synchronous calls. This makes it ideal for automated workflows where urgency varies. It is suitable for non-blocking tasks; it is unsuitable for anything a developer, customer, or downstream process is actively waiting on.
 
 > **Quick check:** A manager proposes moving all Claude API calls to the Batches API to "cut our AI costs in half." You have five workloads: (1) pre-merge code review (developer is waiting to merge), (2) overnight tech-debt report, (3) weekly security audit, (4) real-time customer support responses, (5) monthly batch processing of 50,000 historical documents. Which of these can move to the Batches API, and which cannot? Justify each.
 
 ---
 
-**`custom_id` for tracking and partial retry**
-Each request in a batch carries a `custom_id` that correlates it to a response. This enables you to identify failed requests and re-submit only those — without re-processing the successful ones.
+**Batching architecture: `custom_id` and failure recovery**
+
+Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
+
+**See also:** [Batch API Docs](https://platform.claude.com/docs/en/build-with-claude/message-batches)
+
+>**Exercise:** Think of a scenario where you might use the batches API. Using the Claude SDK in your chosen language, write a script that creates the batch message request, polls the batch for completion, creates a new batch to retry failed requests, and retrieves the results of successful requests. This may take some time, so feel free to save it for your weekly capstone or review this material when you actually need batch requests for your work. 
+
+The important things to understand for the exam are when to use batches instead of synchronous messages and the high-level procedure for processing the results, including failure handling.
 
 > **Exercise:** You submit a batch of 200 invoice extraction requests. When results come back, 18 fail with "context length exceeded" errors. Describe the recovery workflow: how do you identify which documents failed, what do you change, and how do you avoid processing the 182 successes again?
 
@@ -213,42 +218,6 @@ The Batches API does not support multi-turn tool calling within a single request
 > **Quick check:** You want to use the Batches API to run an agentic extraction pipeline where Claude extracts metadata, then calls a validation tool, then revises if needed. Can you do this in a single batch request? What is the correct architecture if you need both cost savings and multi-turn tool use?
 
 ---
-
-### Key Concepts (Chapter 13 — Built-in Tools)
-
-**Tool selection reference**
-| Task | Tool |
-|---|---|
-| Find files by name or pattern | Glob |
-| Search within file contents | Grep |
-| Read a file in full | Read |
-| Create a new file | Write |
-| Modify an existing file precisely | Edit |
-| Run shell commands | Bash |
-
-> **Quick check:** You need to find every file in the codebase that imports `PaymentGateway`. Which tool do you use, with what arguments? Then, once you have a list of files, which tool do you use to read the most important one?
-
----
-
-**Incremental investigation strategy**
-Rather than reading every file at once (expensive, noisy), build understanding incrementally: Grep entry points → Read found files → Grep usages → Read consumer files → repeat.
-
-> **Exercise:** You need to understand how `process_refund()` flows through the codebase before modifying it. Write out the incremental investigation steps: what do you Grep for first, what do you Read, what do you Grep next? Stop when you have enough context to safely make the change.
-
----
-
-**Edit fallback: Read + Write**
-Edit requires a unique text match to make a change. When Edit fails because the target text appears in multiple places, the fallback is: Read the full file, modify the content programmatically, Write the updated version.
-
-> **Quick check:** You're trying to Edit a function called `validate()` but there are six functions with that name across the file. Edit fails. Walk through the fallback procedure step by step.
-
----
-
-### Extension Question
-The incremental investigation strategy (Grep → Read → Grep → Read) seems slower than just reading all potentially relevant files at once. When is the incremental approach actually faster, and when does reading all files upfront make more sense?
-
----
-
 <a id="day19"></a>
 ## Day 19 — Full Practice Exam (60 Questions)
 **Guide reference:** Practice Test section

@@ -5,21 +5,21 @@
 **Exam domains covered:** Domain 3 (Claude Code Configuration and Workflows, 20%), Domain 5 (Context Management and Reliability, 15%)
 
 ### Quick Navigation Links
-**Obsidian:** [Day 11](#Day%2011%20—%20Claude%20Code%20Configuration%20and%20Developer%20Workflows), [Day 12](#Day%2012%20—%20Claude%20Code%20Planning%20Mode,%20Session%20Management,%20and%20CI/CD), [Day 13](#Day%2013%20—%20Escalation%20and%20Human-in-the-Loop), [Day 14](#Day%2014%20—%20Error%20Handling%20in%20Multi-Agent%20Systems), [Day 15](#Day%2015%20—%20Week%203%20Review)
+**Obsidian:** , [Day 11](#Day%2011%20—%20Claude%20Code%20Configuration,%20Developer%20Workflows,%20and%20Built-in%20Tools), [Day 12](#Day%2012%20—%20Claude%20Code%20Planning%20Mode,%20Session%20Management,%20and%20CI/CD), [Day 13](#Day%2013%20—%20Escalation%20and%20Human-in-the-Loop), [Day 14](#Day%2014%20—%20Error%20Handling%20in%20Multi-Agent%20Systems), [Day 15](#Day%2015%20—%20Week%203%20Review)
 
 **Markdown:** [Day 11](#day11), [Day 12](#day12), [Day 13](#day13), [Day 14](#day14), [Day 15](#day15)
 
 ---
 
 <a id="day11"></a>
-## Day 11 — Claude Code: Configuration and Developer Workflows
-**Guide reference:** Chapter 5 (sections 5.1–5.6)
+## Day 11 — Claude Code: Configuration, Developer Workflows, and Built-in Tools
+**Guide reference:** Chapter 5 (sections 5.1–5.6), Chapter 13
 
-Claude Code is where these concepts become daily tools for engineers. This session covers the configuration system that makes Claude Code consistent and team-friendly — and the most common mistakes teams make when setting it up.
+Claude Code is where these concepts become daily tools for engineers. This session covers the configuration system that makes Claude Code consistent and team-friendly, the built-in tools for systematic codebase investigation, and the incremental investigation pattern that avoids expensive file reads.
 
 ---
 
-### Key Concepts
+### Key Concepts (Claude Code Configuration)
 
 **The CLAUDE.md hierarchy: three levels, three scopes**
 CLAUDE.md files exist at three levels: user-level (`~/.claude/CLAUDE.md`, personal and not version-controlled), project-level (`.claude/CLAUDE.md` or root `CLAUDE.md`, shared via VCS), and directory-level (CLAUDE.md in subdirectories, scoped to that folder's conventions).
@@ -55,6 +55,38 @@ Project commands in `.claude/commands/` (or `.claude/skills/`) are version-contr
 - `argument-hint` prompts the developer for a required input when the command is invoked without arguments.
 
 > **Exercise:** Write the complete SKILL.md frontmatter for a `/analyze-module` skill that: runs in an isolated context, can only read files (not write or execute), and asks for a directory path if none is provided. Then write the first two lines of the skill's prompt content.
+
+
+---
+
+### Key Concepts (Built-in Tools)
+
+**Tool selection reference**
+
+| Task | Tool |
+|---|---|
+| Find files by name or pattern | Glob |
+| Search within file contents | Grep |
+| Read a file in full | Read |
+| Create a new file | Write |
+| Modify an existing file precisely | Edit |
+| Run shell commands | Bash |
+
+> **Quick check:** You need to find every file in the codebase that imports `PaymentGateway`. Which tool do you use, with what arguments? Then, once you have a list of files, which tool do you use to read the most important one?
+
+--- 
+
+**Incremental investigation strategy**
+Rather than reading every file at once (expensive, noisy), build understanding incrementally: Grep entry points → Read found files → Grep usages → Read consumer files → repeat.
+
+> **Exercise:** You need to understand how `process_refund()` flows through the codebase before modifying it. Write out the incremental investigation steps: what do you Grep for first, what do you Read, what do you Grep next? Stop when you have enough context to safely make the change.
+
+--- 
+
+**Edit fallback: Read + Write**
+Edit requires a unique text match to make a change. When Edit fails because the target text appears in multiple places, the fallback is: Read the full file, modify the content programmatically, Write the updated version.
+
+> **Quick check:** You're trying to Edit a function called `validate()` but there are six functions with that name across the file. Edit fails. Walk through the fallback procedure step by step.
 
 ---
 
@@ -138,28 +170,6 @@ If files have changed significantly since a session was saved, or if the context
 
 ---
 
-**Batch vs. Real-Time: The Message Batches API**
-
-The Message Batches API processes requests asynchronously with no latency SLA — processing can take up to 24 hours — but costs 50% less than synchronous calls. This makes it ideal for automated workflows where urgency varies.
-
-| Task | API | Why |
-|---|---|---|
-| Pre-merge PR check | Synchronous | Developer is waiting; 24 hours is unacceptable |
-| Overnight tech-debt report | Batch | Result needed by morning; 50% savings justify wait |
-| Weekly security audit | Batch | Not urgent; batch savings are significant |
-| Interactive code review | Synchronous | Immediate response required |
-
-**Batching architecture: `custom_id` and failure recovery**
-
-Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
-
-**See also:** [Batch API Docs](https://platform.claude.com/docs/en/build-with-claude/message-batches)
-
->**Exercise:** Think of a scenario where you might use the batches API. Using the Claude SDK in your chosen language, write a script that creates the batch message request, polls the batch for completion, creates a new batch to retry failed requests, and retrieves the results of successful requests. This may take some time, so feel free to save it for your weekly capstone or review this material when you actually need batch requests for your work. 
-
-The important things to understand for the exam are when to use batches instead of synchronous messages and the high-level procedure for processing the results, including failure handling.
-
----
 
 **Session isolation for review quality**
 The same Claude session that generated code retains its reasoning context and is less likely to challenge its own decisions. An independent instance — one that only sees the code, not how it was written — produces more objective reviews.
