@@ -242,9 +242,22 @@ This is the Friday morning group session. Bring your Day 19 practice test result
 
 ---
 
-## Sample Exam Question
+## Sample Exam Questions
 
-Work through this on your own before the Friday morning meeting. Commit to an answer before checking the answer below.
+Work through these on your own before the Friday morning meeting. Commit to an answer for each before checking the answers section below.
+
+### Question 11 — Scenario: Batch Processing
+
+**Situation:** A team runs two Claude-powered workflows: (1) a blocking pre-merge code review that developers wait on before merging, and (2) an overnight tech-debt report ready for morning review. A manager proposes moving both to the Message Batches API to save 50% on API costs.
+
+**How should you evaluate this proposal?**
+
+- A) Use batch processing for the tech-debt report only; keep real-time calls for pre-merge checks
+- B) Move both workflows to batch processing and poll for results
+- C) Keep real-time calls for both to avoid ordering issues in batch results
+- D) Move both to batch processing with an automatic fallback to real-time if a batch exceeds a time limit
+
+---
 
 ### Question 12 — Scenario: Multi-file Code Review
 
@@ -259,7 +272,13 @@ Work through this on your own before the Friday morning meeting. Commit to an an
 
 ---
 
-## Answer
+## Answers
+
+### Question 11 — Correct answer: A
+
+The Message Batches API offers 50% cost savings but provides no latency SLA — processing can take up to 24 hours. This makes it entirely unsuitable for the pre-merge check, where developers are actively waiting and even a 30-minute delay is unacceptable. The overnight tech-debt report has no such constraint and is a perfect fit for batch processing. Moving both to batch (B, D) breaks the pre-merge workflow. Keeping both synchronous (C) forgoes the available cost savings on the overnight workload.
+
+---
 
 ### Question 12 — Correct answer: A
 

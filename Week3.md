@@ -45,8 +45,6 @@ Instead of one large CLAUDE.md, you can create topic-focused rule files in `.cla
 **Custom slash commands and skills**
 Project commands in `.claude/commands/` (or `.claude/skills/`) are version-controlled and available to everyone who clones the repo. Personal commands in `~/.claude/commands/` are private. Skill frontmatter controls isolation, tool access, and UX.
 
-> **Quick check:** Your team wants a `/security-review` command that runs a focused security audit on any file without polluting the main conversation context. Which frontmatter field makes this work, and why does it matter for context management?
-
 ---
 
 **Skill frontmatter: `context`, `allowed-tools`, `argument-hint`**
@@ -165,8 +163,6 @@ If files have changed significantly since a session was saved, or if the context
 > 1. Reviews a pull request diff for security issues
 > 2. Outputs structured JSON
 > 3. Validates against a schema where findings have `file`, `line`, `severity`, and `description` fields
->
-> Then explain why you would use a *separate* Claude instance for this review rather than the instance that generated the code.
 
 ---
 
@@ -324,12 +320,12 @@ A colleague argues: "We should just wrap every subagent in a try-catch and retur
 
 <a id="day15"></a>
 ## Day 15 — Week 3 Review
-**Guide reference:** Exam Questions 4–6, 10–11, Domain 3 and Domain 5 notes
+**Guide reference:** Exam Questions 4–6, 10, Domain 3 and Domain 5 notes
 
 This is the Friday morning group session. Complete the Sample Exam Questions individually before meeting, then work through the reasoning together.
 
 **Agenda:**
-1. Work through Exam Questions 4–6 (Claude Code scenarios) and 10–11 (CI/CD scenarios) as a group.
+1. Work through Exam Questions 4–6 (Claude Code scenarios) and 10 (CI/CD non-interactive mode) as a group.
 2. Review Domain 3 (Claude Code Configuration and Workflows) and Domain 5 (Context Management and Reliability) notes in Part II of the guide.
 
 ---
@@ -390,19 +386,6 @@ Work through these on your own before the Friday morning meeting. Commit to an a
 
 ---
 
-### Question 11 — Scenario: Claude Code for CI
-
-**Situation:** A team runs two Claude-powered workflows: (1) a blocking pre-merge code review that developers wait on before merging, and (2) an overnight tech-debt report ready for morning review. A manager proposes moving both to the Message Batches API to save 50% on API costs.
-
-**How should you evaluate this proposal?**
-
-- A) Use batch processing for the tech-debt report only; keep real-time calls for pre-merge checks
-- B) Move both workflows to batch processing and poll for results
-- C) Keep real-time calls for both to avoid ordering issues in batch results
-- D) Move both to batch processing with an automatic fallback to real-time if a batch exceeds a time limit
-
----
-
 ## Answers
 
 ### Question 4 — Correct answer: A
@@ -426,12 +409,6 @@ Planning mode is designed precisely for this situation: large changes spanning m
 ### Question 10 — Correct answer: A
 
 The `-p` (or `--print`) flag is the documented mechanism for running Claude Code non-interactively: it processes the prompt, prints to stdout, and exits without waiting for user input. `CLAUDE_HEADLESS=true` (B) is not a real environment variable. Redirecting stdin from `/dev/null` (C) is a Unix workaround that may cause other issues and is not the intended approach. `--batch` (D) does not exist as a Claude Code flag.
-
----
-
-### Question 11 — Correct answer: A
-
-The Message Batches API offers 50% cost savings but provides no latency SLA — processing can take up to 24 hours. This makes it entirely unsuitable for the pre-merge check, where developers are actively waiting and even a 30-minute delay is unacceptable. The overnight tech-debt report has no such constraint and is a perfect fit for batch processing. Moving both to batch (B, D) breaks the pre-merge workflow. Keeping both synchronous (C) forgoes the available cost savings on the overnight workload.
 
 ---
 
