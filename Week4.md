@@ -5,7 +5,7 @@
 **Exam domains covered:** Domain 1 (Agent Architecture and Orchestration, 27%), Domain 4 (Prompt Engineering and Structured Output, 20%), Domain 5 (Context Management and Reliability, 15%)
 
 ### Quick Navigation Links
-**Obsidian:** [Day 16](#Day%2016%20—%20Context%20Management%20in%20Production%20Systems), [Day 17](#Day%2017%20—%20Task%20Decomposition%20Designing%20the%20Shape%20of%20Workflows), [Day 18](#Day%2018%20—%20Scale%20and%20Optimization%20Batch%20Processing%20and%20Built-in%20Tools), [Day 19](#Day%2019%20—%20Full%20Practice%20Exam%20(60%20Questions)), [Day 20](#Day%2020%20—%20Final%20Review%20and%20Exam%20Readiness)
+**Obsidian:** [Day 16](#Day%2016%20—%20Context%20Management%20in%20Production%20Systems), [Day 17](#Day%2017%20—%20Task%20Decomposition%20Designing%20the%20Shape%20of%20Workflows), [Day 18](#Day%2018%20—%20Scale%20and%20Optimization%20Batch%20Processing), [Day 19](#Day%2019%20—%20Full%20Practice%20Exam%20(60%20Questions)), [Day 20](#Day%2020%20—%20Final%20Review%20and%20Exam%20Readiness)
 
 **Markdown:** [Day 16](#day16), [Day 17](#day17), [Day 18](#day18), [Day 19](#day19), [Day 20](#day20)
 
@@ -21,24 +21,10 @@ Systems that work in demos often degrade in production. This session is about wh
 
 ### Key Concepts
 
-**Progressive summarization risk**
-When `/compact` or automatic summarization compresses conversation history, specific values (exact dollar amounts, percentages, timestamps, line numbers) tend to become vague ("roughly," "about," "a few"). The longer the session, the more lossy the compression.
-
-> **Quick check:** A session has been running for 90 minutes investigating a pricing bug. Claude summarizes the history and then confidently refers to "a discount of around 15%." The actual discount was 12.5% — a number that matters for a compliance report. What should have been done before the summary was run, and how?
-
----
-
-**The lost-in-the-middle effect**
-Claude reliably processes content at the very beginning and very end of long inputs. Content in the middle is statistically more likely to be missed or underweighted. This has direct implications for how you structure prompts that contain large amounts of context.
-
-> **Exercise:** You need to send Claude a 4,000-token aggregated research report along with a request to identify the three most critical findings and write three follow-up action items. The report has 12 sections. Where in the message do you put (a) the critical findings from your own prior review, (b) the bulk of the report, and (c) the follow-up action items? Justify the placement of each.
-
----
-
-**Persistent "case facts" blocks**
-Rather than relying on conversation history (which degrades), extract key transactional facts into a structured block that is explicitly included in every prompt — regardless of how history is summarized.
-
-> **Exercise:** You're building a multi-turn customer support agent. By turn 7 of a conversation, the following facts have been established: customer ID CUST-4492, order ORD-8821 ($320 blender), 8 days since purchase, item arrived damaged, customer declined replacement, customer requested refund. Write the "case facts" block that should be injected into every subsequent prompt, formatted so Claude can extract the information reliably.
+**Recall: Context Window Problems**
+- Accumulation of tool calls: each tool call adds context to the conversation history. If it returns many irrelevant fields, then this is a waste of context and tokens!
+- Progressive summarization risk: When context is periodically summarized over long sessions, specific details (especially numerical values), tend to be lost or approximated.
+- Lost-in-the-middle effect: Content in the middle of long inputs tends to be neglected compared to the beginning and end of the input.
 
 ---
 
@@ -49,8 +35,46 @@ If `lookup_order` returns 40 fields but the agent only needs 5 for its current t
 
 ---
 
+**Persistent "case facts" blocks**
+Rather than relying on conversation history (which degrades), extract key transactional facts into a structured block that is explicitly included in every prompt — regardless of how history is summarized.
+
+> **Exercise:** You're building a multi-turn customer support agent. By turn 7 of a conversation, the following facts have been established: customer ID CUST-4492, order ORD-8821 ($320 blender), 8 days since purchase, item arrived damaged, customer declined replacement, customer requested refund. Write the "case facts" block that should be injected into every subsequent prompt, formatted so Claude can extract the information reliably.
+
+**Extraction mechanism: continuous deterministic parsing**
+
+Case facts are extracted automatically by your coordinator script *as the conversation progresses* — typically every 5 turns or when accumulated context crosses a threshold. Extraction parses *structured tool responses* (JSON), not natural-language assistant text. The coordinator maintains a field mapping:
+
+```
+tool_response.field_name → case_facts.field_name
+```
+
+For example, when the agent calls `lookup_order(ORD-8821)` and receives JSON with `{order_id, customer_id, product, price, ...}`, the coordinator's extraction logic:
+1. Parses the JSON deterministically
+2. Maps fields to case fact schema (`price → transaction_amount`, etc.)
+3. Deduplicates by key (e.g., if `order_id` already exists, update, don't duplicate)
+4. Timestamps the extraction
+
+This avoids two pitfalls: (1) relying on the agent to call a `save_case_fact()` tool (unreliable), and (2) parsing natural-language responses with regex (error-prone, loses attribution).
+
+**Storage and injection: external, not in conversation history**
+
+Case facts live in external persistent storage (database, file, or memory store) but are *never* added to the stored conversation history itself. On each turn, the coordinator:
+
+1. Retrieves the current case facts from external storage
+2. Assembles the prompt: [System Prompt] + [Case Facts Block] + [Conversation History] + [Current User Message]
+3. Sends the prompt to Claude
+4. Stores only the user/assistant turns in conversation history (not the injected case facts)
+
+This prevents duplication: if case facts were stored in history and re-injected each turn, they would accumulate and bloat the context window. By keeping them external and injecting fresh, facts are always current and the history stays clean.
+
+---
+
+
 **Scratchpad files for long investigations**
-In long codebase investigations, the agent can write key findings to a scratchpad file. When context degrades or a new session starts, consulting the scratchpad is far more reliable than re-running all the discovery tool calls.
+In long codebase investigations, the agent reads and writes to a scratchpad file through tool calls. After each major discovery, the agent writes a synthesis to the scratchpad — then consults it when context is tight or resuming a session. Unlike case facts (which the coordinator injects into every prompt), the scratchpad is agent-managed: the agent decides when to write and when to read it. This avoids injecting unneeded content into every prompt while ensuring synthesis from 60+ minutes of investigation is never lost to context degradation or session restart.
+
+**Scratchpad vs. Case Facts**
+Both address context loss, but they solve different problems and use different mechanisms. Case facts are narrow, schema-bound transactional data extracted deterministically from structured tool responses (`{customer_id, order_id, price}`). The coordinator parses them automatically and injects them into every prompt — they must always be available because exact values degrade silently during compression. Scratchpad contains investigative synthesis in natural language ("failure occurs only for international orders, triggered by null exchange rate in PR #4451"). The agent writes it explicitly after major findings and reads it selectively when needed. This tool-based, agent-driven approach is appropriate because: (1) the agent knows when it has synthesized something worth saving, (2) scratchpad grows over long investigations and shouldn't bloat every prompt, and (3) natural-language findings are best consulted when the agent actively decides to review its progress, not injected passively.
 
 > **Exercise:** You're 60 minutes into investigating why payment processing occasionally fails. You've found: the failure occurs only for international orders, it's triggered in `PaymentGateway.java` when the currency conversion service returns a null exchange rate, and the null case was introduced in PR #4451 three weeks ago. Write the scratchpad entry that captures these findings in a format that would be useful when resuming this investigation in a new session tomorrow.
 
@@ -65,6 +89,14 @@ When synthesizing information from multiple sources, the link between a claim an
 
 **Handling conflicting data from multiple sources**
 When two sources give different values for the same metric, the correct behavior is to preserve both with attribution — not to pick one arbitrarily, and not to average them. Let the coordinator (or the human) reconcile.
+
+In the context of a research subagent, conflict coalition would be prevented through the following mechanisms: 
+1. **Schema**: The return schema includes a `findings` array (or similar) rather than a single `result` field. This allows the model to include multiple sources with attribution
+2. **Subagent Prompt:** The subagent's prompt should advise it to include both sources when it encounters a conflict and not to average or choose just one of them. 
+3. **Synthesis Agent Prompt:** The synthesis agent would be instructed to synthesize and cite the information it has received, not to combine conflicting statements.
+4. **Orchestrator:** The orchestrator may collect the conflicts reported by the subagent, and check for obvious violations by the synthesis agent (ranges, keywords like "approximately", etc)
+These measures are imperfect, and it is still possible for the agent to combine conflicting claims occasionally. The important thing is to minimize violations, and maintain attribution so that a human reviewer can perform fact checks as needed.
+
 
 > **Exercise:** Two sources disagree on a key metric:
 > - Spotify Annual Report (March 2024): 12% of streams are AI-generated (methodology: automated audio classification)
@@ -131,31 +163,36 @@ Use fixed pipelines when the task structure is predictable, steps are known in a
 > 4. Understand the architecture of an unfamiliar open-source codebase before contributing
 
 ---
-
 ### Extension Question
 A colleague argues that dynamic decomposition is always better than fixed pipelines because it's "more intelligent" and "adapts to the situation." When would you push back on this, and what are the practical costs of dynamic decomposition that fixed pipelines avoid?
 
 ---
-
 <a id="day18"></a>
-## Day 18 — Scale and Optimization: Batch Processing and Built-in Tools
-**Guide reference:** Chapters 7 and 13
+## Day 18 — Scale and Optimization: Batch Processing
+**Guide reference:** Chapter 7
 
-Two efficiency topics that round out the architect's toolkit: the Batches API for cost-effective bulk processing, and the built-in tool reference for systematic codebase investigation.
+The Batches API for cost-effective bulk processing at scale.
 
 ---
+### Key Concepts
 
-### Key Concepts (Chapter 7 — Message Batches API)
+**Batch vs. Real-Time: The Message Batches API**
 
-**When to use batch vs. synchronous**
-The Batches API offers 50% cost savings but may take up to 24 hours with no latency SLA. It is suitable for non-blocking tasks; it is unsuitable for anything a developer, customer, or downstream process is actively waiting on.
+The Message Batches API processes requests asynchronously with no latency SLA — processing can take up to 24 hours — but costs 50% less than synchronous calls. This makes it ideal for automated workflows where urgency varies. It is suitable for non-blocking tasks; it is unsuitable for anything a developer, customer, or downstream process is actively waiting on.
 
 > **Quick check:** A manager proposes moving all Claude API calls to the Batches API to "cut our AI costs in half." You have five workloads: (1) pre-merge code review (developer is waiting to merge), (2) overnight tech-debt report, (3) weekly security audit, (4) real-time customer support responses, (5) monthly batch processing of 50,000 historical documents. Which of these can move to the Batches API, and which cannot? Justify each.
 
 ---
 
-**`custom_id` for tracking and partial retry**
-Each request in a batch carries a `custom_id` that correlates it to a response. This enables you to identify failed requests and re-submit only those — without re-processing the successful ones.
+**Batching architecture: `custom_id` and failure recovery**
+
+Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
+
+**See also:** [Batch API Docs](https://platform.claude.com/docs/en/build-with-claude/message-batches)
+
+>**Exercise:** Think of a scenario where you might use the batches API. Using the Claude SDK in your chosen language, write a script that creates the batch message request, polls the batch for completion, creates a new batch to retry failed requests, and retrieves the results of successful requests. This may take some time, so feel free to save it for your weekly capstone or review this material when you actually need batch requests for your work. 
+
+The important things to understand for the exam are when to use batches instead of synchronous messages and the high-level procedure for processing the results, including failure handling.
 
 > **Exercise:** You submit a batch of 200 invoice extraction requests. When results come back, 18 fail with "context length exceeded" errors. Describe the recovery workflow: how do you identify which documents failed, what do you change, and how do you avoid processing the 182 successes again?
 
@@ -174,42 +211,6 @@ The Batches API does not support multi-turn tool calling within a single request
 > **Quick check:** You want to use the Batches API to run an agentic extraction pipeline where Claude extracts metadata, then calls a validation tool, then revises if needed. Can you do this in a single batch request? What is the correct architecture if you need both cost savings and multi-turn tool use?
 
 ---
-
-### Key Concepts (Chapter 13 — Built-in Tools)
-
-**Tool selection reference**
-| Task | Tool |
-|---|---|
-| Find files by name or pattern | Glob |
-| Search within file contents | Grep |
-| Read a file in full | Read |
-| Create a new file | Write |
-| Modify an existing file precisely | Edit |
-| Run shell commands | Bash |
-
-> **Quick check:** You need to find every file in the codebase that imports `PaymentGateway`. Which tool do you use, with what arguments? Then, once you have a list of files, which tool do you use to read the most important one?
-
----
-
-**Incremental investigation strategy**
-Rather than reading every file at once (expensive, noisy), build understanding incrementally: Grep entry points → Read found files → Grep usages → Read consumer files → repeat.
-
-> **Exercise:** You need to understand how `process_refund()` flows through the codebase before modifying it. Write out the incremental investigation steps: what do you Grep for first, what do you Read, what do you Grep next? Stop when you have enough context to safely make the change.
-
----
-
-**Edit fallback: Read + Write**
-Edit requires a unique text match to make a change. When Edit fails because the target text appears in multiple places, the fallback is: Read the full file, modify the content programmatically, Write the updated version.
-
-> **Quick check:** You're trying to Edit a function called `validate()` but there are six functions with that name across the file. Edit fails. Walk through the fallback procedure step by step.
-
----
-
-### Extension Question
-The incremental investigation strategy (Grep → Read → Grep → Read) seems slower than just reading all potentially relevant files at once. When is the incremental approach actually faster, and when does reading all files upfront make more sense?
-
----
-
 <a id="day19"></a>
 ## Day 19 — Full Practice Exam (60 Questions)
 **Guide reference:** Practice Test section
@@ -241,9 +242,22 @@ This is the Friday morning group session. Bring your Day 19 practice test result
 
 ---
 
-## Sample Exam Question
+## Sample Exam Questions
 
-Work through this on your own before the Friday morning meeting. Commit to an answer before checking the answer below.
+Work through these on your own before the Friday morning meeting. Commit to an answer for each before checking the answers section below.
+
+### Question 11 — Scenario: Batch Processing
+
+**Situation:** A team runs two Claude-powered workflows: (1) a blocking pre-merge code review that developers wait on before merging, and (2) an overnight tech-debt report ready for morning review. A manager proposes moving both to the Message Batches API to save 50% on API costs.
+
+**How should you evaluate this proposal?**
+
+- A) Use batch processing for the tech-debt report only; keep real-time calls for pre-merge checks
+- B) Move both workflows to batch processing and poll for results
+- C) Keep real-time calls for both to avoid ordering issues in batch results
+- D) Move both to batch processing with an automatic fallback to real-time if a batch exceeds a time limit
+
+---
 
 ### Question 12 — Scenario: Multi-file Code Review
 
@@ -258,7 +272,13 @@ Work through this on your own before the Friday morning meeting. Commit to an an
 
 ---
 
-## Answer
+## Answers
+
+### Question 11 — Correct answer: A
+
+The Message Batches API offers 50% cost savings but provides no latency SLA — processing can take up to 24 hours. This makes it entirely unsuitable for the pre-merge check, where developers are actively waiting and even a 30-minute delay is unacceptable. The overnight tech-debt report has no such constraint and is a perfect fit for batch processing. Moving both to batch (B, D) breaks the pre-merge workflow. Keeping both synchronous (C) forgoes the available cost savings on the overnight workload.
+
+---
 
 ### Question 12 — Correct answer: A
 

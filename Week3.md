@@ -5,21 +5,21 @@
 **Exam domains covered:** Domain 3 (Claude Code Configuration and Workflows, 20%), Domain 5 (Context Management and Reliability, 15%)
 
 ### Quick Navigation Links
-**Obsidian:** [Day 11](#Day%2011%20—%20Claude%20Code%20Configuration%20and%20Developer%20Workflows), [Day 12](#Day%2012%20—%20Claude%20Code%20Planning%20Mode,%20Session%20Management,%20and%20CI/CD), [Day 13](#Day%2013%20—%20Escalation%20and%20Human-in-the-Loop), [Day 14](#Day%2014%20—%20Error%20Handling%20in%20Multi-Agent%20Systems), [Day 15](#Day%2015%20—%20Week%203%20Review)
+**Obsidian:** , [Day 11](#Day%2011%20—%20Claude%20Code%20Configuration,%20Developer%20Workflows,%20and%20Built-in%20Tools), [Day 12](#Day%2012%20—%20Claude%20Code%20Planning%20Mode,%20Session%20Management,%20and%20CI/CD), [Day 13](#Day%2013%20—%20Escalation%20and%20Human-in-the-Loop), [Day 14](#Day%2014%20—%20Error%20Handling%20in%20Multi-Agent%20Systems), [Day 15](#Day%2015%20—%20Week%203%20Review)
 
 **Markdown:** [Day 11](#day11), [Day 12](#day12), [Day 13](#day13), [Day 14](#day14), [Day 15](#day15)
 
 ---
 
 <a id="day11"></a>
-## Day 11 — Claude Code: Configuration and Developer Workflows
-**Guide reference:** Chapter 5 (sections 5.1–5.6)
+## Day 11 — Claude Code: Configuration, Developer Workflows, and Built-in Tools
+**Guide reference:** Chapter 5 (sections 5.1–5.6), Chapter 13
 
-Claude Code is where these concepts become daily tools for engineers. This session covers the configuration system that makes Claude Code consistent and team-friendly — and the most common mistakes teams make when setting it up.
+Claude Code is where these concepts become daily tools for engineers. This session covers the configuration system that makes Claude Code consistent and team-friendly, the built-in tools for systematic codebase investigation, and the incremental investigation pattern that avoids expensive file reads.
 
 ---
 
-### Key Concepts
+### Key Concepts (Claude Code Configuration)
 
 **The CLAUDE.md hierarchy: three levels, three scopes**
 CLAUDE.md files exist at three levels: user-level (`~/.claude/CLAUDE.md`, personal and not version-controlled), project-level (`.claude/CLAUDE.md` or root `CLAUDE.md`, shared via VCS), and directory-level (CLAUDE.md in subdirectories, scoped to that folder's conventions).
@@ -45,8 +45,6 @@ Instead of one large CLAUDE.md, you can create topic-focused rule files in `.cla
 **Custom slash commands and skills**
 Project commands in `.claude/commands/` (or `.claude/skills/`) are version-controlled and available to everyone who clones the repo. Personal commands in `~/.claude/commands/` are private. Skill frontmatter controls isolation, tool access, and UX.
 
-> **Quick check:** Your team wants a `/security-review` command that runs a focused security audit on any file without polluting the main conversation context. Which frontmatter field makes this work, and why does it matter for context management?
-
 ---
 
 **Skill frontmatter: `context`, `allowed-tools`, `argument-hint`**
@@ -55,6 +53,38 @@ Project commands in `.claude/commands/` (or `.claude/skills/`) are version-contr
 - `argument-hint` prompts the developer for a required input when the command is invoked without arguments.
 
 > **Exercise:** Write the complete SKILL.md frontmatter for a `/analyze-module` skill that: runs in an isolated context, can only read files (not write or execute), and asks for a directory path if none is provided. Then write the first two lines of the skill's prompt content.
+
+
+---
+
+### Key Concepts (Built-in Tools)
+
+**Tool selection reference**
+
+| Task | Tool |
+|---|---|
+| Find files by name or pattern | Glob |
+| Search within file contents | Grep |
+| Read a file in full | Read |
+| Create a new file | Write |
+| Modify an existing file precisely | Edit |
+| Run shell commands | Bash |
+
+> **Quick check:** You need to find every file in the codebase that imports `PaymentGateway`. Which tool do you use, with what arguments? Then, once you have a list of files, which tool do you use to read the most important one?
+
+--- 
+
+**Incremental investigation strategy**
+Rather than reading every file at once (expensive, noisy), build understanding incrementally: Grep entry points → Read found files → Grep usages → Read consumer files → repeat.
+
+> **Exercise:** You need to understand how `process_refund()` flows through the codebase before modifying it. Write out the incremental investigation steps: what do you Grep for first, what do you Read, what do you Grep next? Stop when you have enough context to safely make the change.
+
+--- 
+
+**Edit fallback: Read + Write**
+Edit requires a unique text match to make a change. When Edit fails because the target text appears in multiple places, the fallback is: Read the full file, modify the content programmatically, Write the updated version.
+
+> **Quick check:** You're trying to Edit a function called `validate()` but there are six functions with that name across the file. Edit fails. Walk through the fallback procedure step by step.
 
 ---
 
@@ -133,33 +163,9 @@ If files have changed significantly since a session was saved, or if the context
 > 1. Reviews a pull request diff for security issues
 > 2. Outputs structured JSON
 > 3. Validates against a schema where findings have `file`, `line`, `severity`, and `description` fields
->
-> Then explain why you would use a *separate* Claude instance for this review rather than the instance that generated the code.
 
 ---
 
-**Batch vs. Real-Time: The Message Batches API**
-
-The Message Batches API processes requests asynchronously with no latency SLA — processing can take up to 24 hours — but costs 50% less than synchronous calls. This makes it ideal for automated workflows where urgency varies.
-
-| Task | API | Why |
-|---|---|---|
-| Pre-merge PR check | Synchronous | Developer is waiting; 24 hours is unacceptable |
-| Overnight tech-debt report | Batch | Result needed by morning; 50% savings justify wait |
-| Weekly security audit | Batch | Not urgent; batch savings are significant |
-| Interactive code review | Synchronous | Immediate response required |
-
-**Batching architecture: `custom_id` and failure recovery**
-
-Each batch request includes a `custom_id` field to correlate responses with original requests. This enables selective retry: if 95 of 100 documents succeed and 5 fail (e.g., context limit exceeded), you identify failures by `custom_id` and re-submit only those 5 after adjusting your strategy.
-
-**See also:** [Batch API Docs](https://platform.claude.com/docs/en/build-with-claude/message-batches)
-
->**Exercise:** Think of a scenario where you might use the batches API. Using the Claude SDK in your chosen language, write a script that creates the batch message request, polls the batch for completion, creates a new batch to retry failed requests, and retrieves the results of successful requests. This may take some time, so feel free to save it for your weekly capstone or review this material when you actually need batch requests for your work. 
-
-The important things to understand for the exam are when to use batches instead of synchronous messages and the high-level procedure for processing the results, including failure handling.
-
----
 
 **Session isolation for review quality**
 The same Claude session that generated code retains its reasoning context and is less likely to challenge its own decisions. An independent instance — one that only sees the code, not how it was written — produces more objective reviews.
@@ -314,12 +320,12 @@ A colleague argues: "We should just wrap every subagent in a try-catch and retur
 
 <a id="day15"></a>
 ## Day 15 — Week 3 Review
-**Guide reference:** Exam Questions 4–6, 10–11, Domain 3 and Domain 5 notes
+**Guide reference:** Exam Questions 4–6, 10, Domain 3 and Domain 5 notes
 
 This is the Friday morning group session. Complete the Sample Exam Questions individually before meeting, then work through the reasoning together.
 
 **Agenda:**
-1. Work through Exam Questions 4–6 (Claude Code scenarios) and 10–11 (CI/CD scenarios) as a group.
+1. Work through Exam Questions 4–6 (Claude Code scenarios) and 10 (CI/CD non-interactive mode) as a group.
 2. Review Domain 3 (Claude Code Configuration and Workflows) and Domain 5 (Context Management and Reliability) notes in Part II of the guide.
 
 ---
@@ -380,19 +386,6 @@ Work through these on your own before the Friday morning meeting. Commit to an a
 
 ---
 
-### Question 11 — Scenario: Claude Code for CI
-
-**Situation:** A team runs two Claude-powered workflows: (1) a blocking pre-merge code review that developers wait on before merging, and (2) an overnight tech-debt report ready for morning review. A manager proposes moving both to the Message Batches API to save 50% on API costs.
-
-**How should you evaluate this proposal?**
-
-- A) Use batch processing for the tech-debt report only; keep real-time calls for pre-merge checks
-- B) Move both workflows to batch processing and poll for results
-- C) Keep real-time calls for both to avoid ordering issues in batch results
-- D) Move both to batch processing with an automatic fallback to real-time if a batch exceeds a time limit
-
----
-
 ## Answers
 
 ### Question 4 — Correct answer: A
@@ -416,12 +409,6 @@ Planning mode is designed precisely for this situation: large changes spanning m
 ### Question 10 — Correct answer: A
 
 The `-p` (or `--print`) flag is the documented mechanism for running Claude Code non-interactively: it processes the prompt, prints to stdout, and exits without waiting for user input. `CLAUDE_HEADLESS=true` (B) is not a real environment variable. Redirecting stdin from `/dev/null` (C) is a Unix workaround that may cause other issues and is not the intended approach. `--batch` (D) does not exist as a Claude Code flag.
-
----
-
-### Question 11 — Correct answer: A
-
-The Message Batches API offers 50% cost savings but provides no latency SLA — processing can take up to 24 hours. This makes it entirely unsuitable for the pre-merge check, where developers are actively waiting and even a 30-minute delay is unacceptable. The overnight tech-debt report has no such constraint and is a perfect fit for batch processing. Moving both to batch (B, D) breaks the pre-merge workflow. Keeping both synchronous (C) forgoes the available cost savings on the overnight workload.
 
 ---
 

@@ -168,6 +168,7 @@ A `PreToolUse` hook intercepts a tool call _before_ it executes. This is the rig
 ---
 
 **The fundamental rule: hooks vs. prompt instructions**
+
 | | Hooks | Prompt instructions |
 |---|---|---|
 | Guarantee | Deterministic (100%) | Probabilistic (>90%, not 100%) |

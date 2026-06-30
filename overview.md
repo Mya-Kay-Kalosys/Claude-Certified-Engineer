@@ -88,15 +88,15 @@ Move from single API calls to multi-step autonomous agents and multi-agent syste
 
 **[→ Full week guide](Week3.md)**
 
-Apply the Week 1–2 foundations to real engineering workflows with Claude Code, then tackle escalation, error handling, and context degradation.
+Apply the Week 1–2 foundations to real engineering workflows with Claude Code, systematic codebase investigation, escalation, and error handling.
 
-| Day | Topic                                                     | Guide chapters                         |
-| --- | --------------------------------------------------------- | -------------------------------------- |
-| 11  | Claude Code: Configuration and Developer Workflows        | Ch 5 (5.1–5.6)                         |
-| 12  | Claude Code: Planning Mode, Session Management, and CI/CD | Ch 5 (5.6–5.10)                        |
-| 13  | Escalation and Human-in-the-Loop                          | Ch 9                                   |
-| 14  | Error Handling in Multi-Agent Systems                     | Ch 10                                  |
-| 15  | Review and Practice                                       | Exam Qs 4–6, 10–11, Domain 3 & 5 notes |
+| Day | Topic                                                                            | Guide chapters                         |
+| --- | -------------------------------------------------------------------------------- | -------------------------------------- |
+| 11  | Claude Code: Configuration, Developer Workflows, and Built-in Tools             | Ch 5 (5.1–5.6), Ch 13                  |
+| 12  | Claude Code: Planning Mode, Session Management, and CI/CD                       | Ch 5 (5.6–5.10)                        |
+| 13  | Escalation and Human-in-the-Loop                                                | Ch 9                                   |
+| 14  | Error Handling in Multi-Agent Systems                                           | Ch 10                                  |
+| 15  | Review and Practice                                                             | Exam Qs 4–6, 10–11, Domain 3 & 5 notes |
 
 **Capstone:** Production-grade CI/CD code review pipeline — configuration design, CI commands, false positive management, re-review logic, and uncertainty routing.
 
@@ -112,7 +112,7 @@ Context management at scale, task decomposition strategy, batch processing — t
 | --- | ---------------------------------------------------- | -------------- |
 | 16  | Context Management in Production Systems             | Ch 11, 12      |
 | 17  | Task Decomposition: Designing the Shape of Workflows | Ch 8           |
-| 18  | Scale and Optimization: Batch Processing and Built-in Tools | Ch 7, 13  |
+| 18  | Scale and Optimization: Batch Processing             | Ch 7           |
 | 19  | Full Practice Exam (60 Questions)                    | Practice Test  |
 | 20  | Final Review and Exam Readiness                      | Exam Q 12, all domains |
 
